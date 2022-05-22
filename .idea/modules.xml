@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/metu-os-22-hw2.iml" filepath="$PROJECT_DIR$/.idea/metu-os-22-hw2.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/metu_os_22_hw2.iml" filepath="$PROJECT_DIR$/.idea/metu_os_22_hw2.iml" />
     </modules>
   </component>
 </project>
