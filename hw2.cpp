@@ -10,13 +10,13 @@
 int main() {
     int gi, gj; // grid size
     int pp_count; // Number of proper privates
+    int order_count; // Number of orders
     std::vector <std::vector<int> > grid;
-    std::vector <std::vector<int> > pps; // Proper privates
 
     //Areas to gather from.
     //First parameter is unique gid.
     //Second parameter is a vector of pair of top-left coordinates.
-    std::vector < std::pair < int, std::vector < std::pair < int, int > > > > areas;
+    std::vector < std::pair < int, std::vector < std::pair < int, int > > > > pps;
 
     std::cin >> gi;
     std::cin >> gj;
@@ -49,10 +49,8 @@ int main() {
             coordinates_vec.push_back(coordinates);
         }
         area.second = coordinates_vec;
-        areas.push_back(area);
+        pps.push_back(area);
     }
-
-    std::cout << gi;
 
     return 0;
 }
