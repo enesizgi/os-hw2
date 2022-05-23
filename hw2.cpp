@@ -3,29 +3,8 @@
 #include <pthread.h>
 #include "hw2_output.h"
 
-//void input_function(int &gi, int &gj, std::vector <std::vector<int>> &grid) {
-//
-//}
-
-int main() {
-    int gi, gj; // grid size
-    int pp_count; // Number of proper privates
-    int order_count; // Number of orders
-    int smoker_count; // Number of smokers
-    std::vector <std::vector<int> > grid;
-    std::vector <std::pair<int, std::string> > orders;
-
-
-    //Areas to gather from.
-    //First parameter is unique gid.
-    //Second parameter is a vector of pair of top-left coordinates.
-    std::vector < std::pair < std::vector<int>, std::vector < std::pair < int, int > > > > pps;
-
-    // Smokers vector consists of pairs.
-    // First pair parameter is a pair of 3: id, time_to_smoke, cell_count.
-    // Second pair parameter is also a pair of 3: coord_i, coord_j, cigbutt_count.
-    std::vector< std::pair < std::vector <int>, std::vector<int> > >  smokers;
-
+void input_part1 (int& gi, int& gj, int &pp_count, std::vector <std::vector<int> >& grid,
+                  std::vector < std::pair < std::vector<int>, std::vector < std::pair < int, int > > > >& pps) {
     std::cin >> gi;
     std::cin >> gj;
     for (int i = 0; i < gi; i++) {
@@ -60,14 +39,18 @@ int main() {
         area.second = coordinates_vec;
         pps.push_back(area);
     }
+}
 
+void input_part2 (int& order_count, std::vector <std::pair<int, std::string> >& orders) {
     std::cin >> order_count;
     for (int i = 0; i < order_count; i++) {
         std::pair <int, std::string> order;
         std::cin >> order.first >> order.second;
         orders.push_back(order);
     }
+}
 
+void input_part3 (int& smoker_count, std::vector< std::pair < std::vector <int>, std::vector<int> > >&  smokers) {
     std::cin >> smoker_count;
     for (int i = 0; i < smoker_count ;i++) {
         std::pair < std::vector <int>, std::vector<int> > smoker;
@@ -90,6 +73,25 @@ int main() {
         smoker.second = smoker_locations;
         smokers.push_back(smoker);
     }
+}
 
+int main() {
+    int gi, gj; // grid size
+    int pp_count; // Number of proper privates
+    int order_count; // Number of orders
+    int smoker_count; // Number of smokers
+    std::vector <std::vector<int> > grid;
+    std::vector <std::pair<int, std::string> > orders;
+
+    //Areas to gather from.
+    //First parameter is unique gid.
+    //Second parameter is a vector of pair of top-left coordinates.
+    std::vector < std::pair < std::vector<int>, std::vector < std::pair < int, int > > > > pps;
+
+    // Smokers vector consists of pairs.
+    // First pair parameter is a pair of 3: id, time_to_smoke, cell_count.
+    // Second pair parameter is also a pair of 3: coord_i, coord_j, cigbutt_count.
+    std::vector< std::pair < std::vector <int>, std::vector<int> > >  smokers;
+    
     return 0;
 }
