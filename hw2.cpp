@@ -163,7 +163,6 @@ void* order_routine (void* arg) {
         pthread_mutex_unlock(&order_type_mutex);
     }
     else {
-        // TODO: implement stop case
         pthread_mutex_lock(&order_type_mutex);
         order_type = 3;
         hw2_notify(ORDER_STOP, 0, 0, 0);
@@ -177,6 +176,7 @@ void* order_routine (void* arg) {
 }
 
 void lock_grid (std::pair<int,int>& top_left, std::pair<int,int>& bottom_left, std::pair<int,int>& top_right) {
+//    std::cout << " " << top_left.first << " " << bottom_left.first << " " << top_right.first << std::endl;
     for (int i = top_left.first; i <= bottom_left.first; i++) {
         for (int j = top_left.second; j <= top_right.second; j++) {
             pthread_mutex_lock(&grid_mutex[i][j]);
@@ -239,16 +239,21 @@ void* routine (void* arg) {
         lock_grid(top_left, bottom_left, top_right);
         pthread_mutex_unlock(&grid_status_mutex);
         hw2_notify(PROPER_PRIVATE_ARRIVED, gid, top_left.first, top_left.second);
+//        std::cout << "thread gid: " << gid << std::endl;
 
         for (int i = top_left.first; i <= bottom_left.first; i++) {
             for (int j = top_left.second; j <= top_right.second; j++) {
-                pthread_mutex_lock(&grid_cigbutt_count_mutex);
+//                std::cout << "thread gid: " << gid << std::endl;
                 while (true) {
+                    pthread_mutex_lock(&grid_status_mutex);
                     if (grid[i][j] == 0) {
+                        pthread_mutex_unlock(&grid_status_mutex);
                         break;
                     }
-                    pthread_mutex_lock(&pp_last_obeyed_order_mutex);
+                    pthread_mutex_unlock(&grid_status_mutex);
                     int waitRetVal = wait(wait_time, pp_wait_cond, pp_wait_mutex);
+                    pthread_mutex_lock(&grid_cigbutt_count_mutex);
+                    pthread_mutex_lock(&pp_last_obeyed_order_mutex);
                     int last_obeyed_order = 0;
                     for (int i = 0; i < pp_count; i++) {
                         if (gid == pp_last_obeyed_order[i].first) {
@@ -273,7 +278,7 @@ void* routine (void* arg) {
 //                            std::cout << "soldier break" << std::endl;
                         }
                         else if (order_type == 3) {
-                            std::cout << order_type << std::endl;
+//                            std::cout << order_type << std::endl;
                             // THREAD SHOULD BE STOPPED
                             pthread_mutex_lock(&grid_status_exit_mutex);
                             unlock_grid(top_left, bottom_left, top_right);
@@ -292,9 +297,8 @@ void* routine (void* arg) {
                     }
                     pthread_mutex_unlock(&order_type_mutex);
                     pthread_mutex_unlock(&pp_last_obeyed_order_mutex);
-
+                    pthread_mutex_unlock(&grid_cigbutt_count_mutex);
                 }
-                pthread_mutex_unlock(&grid_cigbutt_count_mutex);
             }
         }
         hw2_notify(PROPER_PRIVATE_CLEARED, gid, 0, 0);
