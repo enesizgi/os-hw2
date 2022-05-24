@@ -20,7 +20,7 @@ pthread_mutex_t grid_status_exit_mutex = PTHREAD_MUTEX_INITIALIZER;
 // Second integer is coord_i.
 // Third integer is coord_j.
 std::vector < std::vector<int> > pps_current_area;
-pthread_mutex_t pps_current_area_mutex;
+pthread_mutex_t pps_current_area_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 //Areas to gather from.
 //First parameter is unique gid.
@@ -233,7 +233,9 @@ int main() {
     std::vector<std::pair<int, pthread_t> > pp_threads;
 
     input_part1(gi, gj, pp_count, grid, pps);
-
+    input_part2(order_count, orders);
+    input_part3(smoker_count, smokers);
+    
     // Initialize pp_wait_conds and pp_wait_mutexes
     for (int i = 0; i < pp_count; i++) {
         pthread_mutex_t mutex;
@@ -251,7 +253,6 @@ int main() {
         pthread_mutex_init(&mutex, NULL);
         mutex_vec.push_back(std::make_pair(pps[i].first[0], mutex));
     }
-    pthread_mutex_init(&pps_current_area_mutex, NULL);
 
     // Initialize threads here
     for (int i = 0; i < pp_count; i++) {
