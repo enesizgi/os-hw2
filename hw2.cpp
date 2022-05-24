@@ -180,6 +180,11 @@ void lock_grid (std::pair<int,int>& top_left, std::pair<int,int>& bottom_left, s
     for (int i = top_left.first; i <= bottom_left.first; i++) {
         for (int j = top_left.second; j <= top_right.second; j++) {
             pthread_mutex_lock(&grid_mutex[i][j]);
+            if (pthread_mutex_trylock(&grid_mutex[i][j]) != 0) {
+                pthread_mutex_unlock(&grid_mutex[i][j]);
+//                lock_grid(top_left, bottom_left, top_right);
+                return;
+            }
         }
     }
 }
@@ -245,13 +250,13 @@ void* routine (void* arg) {
             for (int j = top_left.second; j <= top_right.second; j++) {
 //                std::cout << "thread gid: " << gid << std::endl;
                 while (true) {
+                    int waitRetVal = wait(wait_time, pp_wait_cond, pp_wait_mutex);
                     pthread_mutex_lock(&grid_status_mutex);
                     if (grid[i][j] == 0) {
                         pthread_mutex_unlock(&grid_status_mutex);
                         break;
                     }
-                    pthread_mutex_unlock(&grid_status_mutex);
-                    int waitRetVal = wait(wait_time, pp_wait_cond, pp_wait_mutex);
+//                    pthread_mutex_unlock(&grid_status_mutex);
                     pthread_mutex_lock(&grid_cigbutt_count_mutex);
                     pthread_mutex_lock(&pp_last_obeyed_order_mutex);
                     int last_obeyed_order = 0;
@@ -298,6 +303,7 @@ void* routine (void* arg) {
                     pthread_mutex_unlock(&order_type_mutex);
                     pthread_mutex_unlock(&pp_last_obeyed_order_mutex);
                     pthread_mutex_unlock(&grid_cigbutt_count_mutex);
+                    pthread_mutex_unlock(&grid_status_mutex);
                 }
             }
         }
