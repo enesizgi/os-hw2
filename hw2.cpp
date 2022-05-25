@@ -366,10 +366,6 @@ void* routine (void* arg) {
                 return NULL;
             }
         }
-        else {
-            pthread_mutex_unlock(&order_type_mutex);
-            pthread_mutex_unlock(&pp_last_obeyed_order_mutex);
-        }
         pthread_mutex_unlock(&order_type_mutex);
         pthread_mutex_unlock(&pp_last_obeyed_order_mutex);
 
