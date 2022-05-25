@@ -29,6 +29,11 @@ std::vector<std::pair<std::vector<int>, std::vector<std::pair<int, int> > > > pp
 // First pair parameter is a pair of 3: id, time_to_smoke, cell_count.
 // Second pair parameter is also a pair of 3: coord_i, coord_j, cigbutt_count.
 std::vector< std::pair < std::vector <int>, std::vector<int> > >  smokers;
+std::vector< std::pair<int, pthread_t > > smoker_threads;
+std::vector <std::vector<int> > smoker_grid;
+pthread_mutex_t smoker_grid_lock = PTHREAD_MUTEX_INITIALIZER; // Lock for smoker_grid.
+std::vector <std::vector<pthread_mutex_t> > smoker_grid_mutex;
+std::vector <std::pair<int, std::vector<std::pair<int, int> > > > smokers_lock_coords;
 
 pthread_mutex_t pp_wait_mutexes_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t pp_wait_conds_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -45,25 +50,31 @@ pthread_mutex_t pp_last_obeyed_order_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t try_lock_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void input_part1 (int& gi, int& gj, int &pp_count, std::vector <std::vector<int> >& grid,
-                  std::vector < std::pair < std::vector<int>, std::vector < std::pair < int, int > > > >& pps) {
+pthread_mutex_t smoker_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t smoker_cond = PTHREAD_COND_INITIALIZER;
+
+void input_part1(int &gi, int &gj, int &pp_count, std::vector<std::vector<int> > &grid,
+                 std::vector<std::pair<std::vector<int>, std::vector<std::pair<int, int> > > > &pps) {
     std::cin >> gi;
     std::cin >> gj;
     for (int i = 0; i < gi; i++) {
-        std::vector<int> row;
-        std::vector<int> row_mutex_status;
-        std::vector<pthread_mutex_t> row_mutex;
+        std::vector<int> row, smoker_grid_row;
+        std::vector<pthread_mutex_t> row_mutex, smoker_grid_row_mutex;
         for (int j = 0; j < gj; j++) {
             int cell;
             std::cin >> cell;
             row.push_back(cell);
-            row_mutex_status.push_back(0);
             pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
             row_mutex.push_back(mutex);
+
+            smoker_grid_row.push_back(0);
+            pthread_mutex_t smoker_grid_mutex = PTHREAD_MUTEX_INITIALIZER;
+            smoker_grid_row_mutex.push_back(smoker_grid_mutex);
         }
         grid.push_back(row);
-//        grid_mutex_status.push_back(row_mutex_status);
         grid_mutex.push_back(row_mutex);
+        smoker_grid.push_back(smoker_grid_row);
+        smoker_grid_mutex.push_back(smoker_grid_row_mutex);
     }
 
     std::cin >> pp_count;
@@ -113,6 +124,9 @@ void input_part3 (int& smoker_count, std::vector< std::pair < std::vector <int>,
         smoker_properties.push_back(time_to_smoke);
         smoker_properties.push_back(cell_count);
         smoker.first = smoker_properties;
+//
+//        std::vector<std::pair<int, int> > coords;
+//        smokers_lock_coords.push_back(std::make_pair(id, coords));
 
         std::vector<int> smoker_locations;
         for (int j = 0; j < cell_count ;j++) {
@@ -124,6 +138,8 @@ void input_part3 (int& smoker_count, std::vector< std::pair < std::vector <int>,
         }
         smoker.second = smoker_locations;
         smokers.push_back(smoker);
+
+
     }
 }
 
@@ -180,11 +196,20 @@ void* order_routine (void* arg) {
     return NULL;
 }
 
-int try_locking_grid(std::pair<int,int>& top_left, std::pair<int,int>& bottom_left, std::pair<int,int>& top_right) {
+int try_locking_grid(std::pair<int,int>& top_left, std::pair<int,int>& bottom_left, std::pair<int,int>& top_right, bool isSmoker) {
     std::vector<std::pair<int, int> > locations;
     for (int i = top_left.first; i <= bottom_left.first; i++) {
         for (int j = top_left.second; j <= top_right.second; j++) {
             if (pthread_mutex_trylock(&grid_mutex[i][j]) != 0) {
+                if (isSmoker) {
+                    pthread_mutex_lock(&smoker_grid_lock);
+                    if (smoker_grid[i][j] > 0) {
+                        smoker_grid[i][j]++;
+                    }
+                    pthread_mutex_unlock(&smoker_grid_lock);
+                    locations.push_back(std::make_pair(i, j));
+                    continue;
+                }
                 int locations_size = locations.size();
                 for (int k = 0; k < locations_size; k++) {
                     int x = locations[k].first;
@@ -194,6 +219,11 @@ int try_locking_grid(std::pair<int,int>& top_left, std::pair<int,int>& bottom_le
                 return 1; // failed to lock
             }
             else {
+                if (isSmoker) {
+                    pthread_mutex_lock(&smoker_grid_lock);
+                    smoker_grid[i][j]++;
+                    pthread_mutex_unlock(&smoker_grid_lock);
+                }
                 locations.push_back(std::make_pair(i, j));
             }
         }
@@ -201,11 +231,11 @@ int try_locking_grid(std::pair<int,int>& top_left, std::pair<int,int>& bottom_le
     return 0; // successful locking
 }
 
-int lock_grid (std::pair<int,int>& top_left, std::pair<int,int>& bottom_left, std::pair<int,int>& top_right, int gid) {
+int lock_grid (std::pair<int,int>& top_left, std::pair<int,int>& bottom_left, std::pair<int,int>& top_right, int gid, bool isSmoker) {
     while (true) {
         pthread_mutex_lock(&grid_status_mutex);
         pthread_mutex_lock(&try_lock_mutex);
-        int ret_trying_lock = try_locking_grid(top_left, bottom_left, top_right);
+        int ret_trying_lock = try_locking_grid(top_left, bottom_left, top_right, isSmoker);
         pthread_mutex_unlock(&try_lock_mutex);
         if (ret_trying_lock == 0) {
             pthread_mutex_unlock(&grid_status_mutex);
@@ -213,32 +243,73 @@ int lock_grid (std::pair<int,int>& top_left, std::pair<int,int>& bottom_left, st
         }
         else {
             pthread_cond_wait(&grid_status_cond, &grid_status_mutex);
-            pthread_mutex_lock(&pp_last_obeyed_order_mutex);
-            int last_obeyed_order = 0;
-            for (int k = 0; k < pp_count; k++) {
-                if (gid == pp_last_obeyed_order[k].first) {
-                    last_obeyed_order = pp_last_obeyed_order[k].second;
+            if (!isSmoker) {
+                pthread_mutex_lock(&pp_last_obeyed_order_mutex);
+                int last_obeyed_order = 0;
+                for (int k = 0; k < pp_count; k++) {
+                    if (gid == pp_last_obeyed_order[k].first) {
+                        last_obeyed_order = pp_last_obeyed_order[k].second;
+                    }
                 }
+                pthread_mutex_lock(&order_type_mutex);
+                if (last_obeyed_order != order_type) {
+                    pthread_mutex_unlock(&order_type_mutex);
+                    pthread_mutex_unlock(&pp_last_obeyed_order_mutex);
+                    pthread_mutex_unlock(&grid_status_mutex);
+                    return 1; // an order is given.
             }
-            pthread_mutex_lock(&order_type_mutex);
-            if (last_obeyed_order != order_type) {
-                pthread_mutex_unlock(&order_type_mutex);
-                pthread_mutex_unlock(&pp_last_obeyed_order_mutex);
-                pthread_mutex_unlock(&grid_status_mutex);
-                return 1; // an order is given.
             }
         }
-        pthread_mutex_unlock(&order_type_mutex);
-        pthread_mutex_unlock(&pp_last_obeyed_order_mutex);
+        if (!isSmoker) {
+            pthread_mutex_unlock(&order_type_mutex);
+            pthread_mutex_unlock(&pp_last_obeyed_order_mutex);
+        }
         pthread_mutex_unlock(&grid_status_mutex);
     }
 }
 
-void unlock_grid (std::pair<int,int>& top_left, std::pair<int,int>& bottom_left, std::pair<int,int>& top_right) {
+int lock_grid_smoker (std::pair<int,int>& top_left, std::pair<int,int>& bottom_left, std::pair<int,int>& top_right, int gid, int cell_i, int cell_j) {
+    while (true) {
+        // MAYBE USE smoker_grid_lock here?
+        pthread_mutex_lock(&smoker_grid_mutex[cell_i][cell_j]); // UNLOCK OLANI SMOKER ROUTINEDE.
+        std::cout << "smoker_grid_mutex locked" << std::endl;
+        pthread_mutex_lock(&grid_status_mutex);
+        std::cout << "grid_status_mutex locked" << std::endl;
+        pthread_mutex_lock(&try_lock_mutex);
+        int ret_trying_lock = try_locking_grid(top_left, bottom_left, top_right, true); // true for smoker
+        pthread_mutex_unlock(&try_lock_mutex);
+        if (ret_trying_lock == 0) {
+            pthread_mutex_unlock(&grid_status_mutex);
+            std::cout << "returned 0 : " << gid << std::endl;
+            return 0; // successful locking
+        }
+        else {
+            std::cout << "waiting on cond grid_status_cond" << std::endl;
+            pthread_cond_wait(&grid_status_cond, &grid_status_mutex);
+//            return 0;
+        }
+        pthread_mutex_unlock(&grid_status_mutex);
+        pthread_mutex_unlock(&smoker_grid_mutex[cell_i][cell_j]); // MAYBE?
+    }
+}
+
+void unlock_grid (std::pair<int,int>& top_left, std::pair<int,int>& bottom_left, std::pair<int,int>& top_right, bool isSmoker) {
     pthread_mutex_lock(&grid_status_mutex);
     for (int i = top_left.first; i <= bottom_left.first; i++) {
         for (int j = top_left.second; j <= top_right.second; j++) {
-            pthread_mutex_unlock(&grid_mutex[i][j]);
+            if (isSmoker) {
+                pthread_mutex_lock(&smoker_grid_lock);
+                if (smoker_grid[i][j] > 1) {
+                    smoker_grid[i][j]--;
+                }
+                else {
+                    smoker_grid[i][j] = 0;
+                    pthread_mutex_unlock(&grid_mutex[i][j]);
+                }
+                pthread_mutex_unlock(&smoker_grid_lock);
+            } else {
+                pthread_mutex_unlock(&grid_mutex[i][j]);
+            }
         }
     }
     pthread_mutex_unlock(&grid_status_mutex);
@@ -317,9 +388,9 @@ void* routine (void* arg) {
 
         // Part 3 complex case'de burasi muhtemelen patlar. (case 1)
         // Update: complex case artik calisiyor.
-        if (lock_grid(top_left, bottom_left, top_right, gid) == 0) {
+        if (lock_grid(top_left, bottom_left, top_right, gid, false) == 0) {
             gather_cigbutt(gid, top_left, bottom_left, top_right, wait_time, pp_wait_cond, pp_wait_mutex);
-            unlock_grid(top_left, bottom_left, top_right);
+            unlock_grid(top_left, bottom_left, top_right, false);
         }
 
         pthread_mutex_lock(&pp_last_obeyed_order_mutex);
@@ -374,12 +445,121 @@ void* routine (void* arg) {
 }
 
 void* smoker_routine (void* arg) {
+    int sid = *(int*)arg;
+    int time_to_smoke, cell_count, smoking_area_count;
+    std::pair < std::vector <int>, std::vector<int> >* smoker;
+    pthread_mutex_t smoker_wait_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_cond_t smoker_wait_cond = PTHREAD_COND_INITIALIZER;
+
+    // Find smoker from smokers vec
+    for (int i = 0; i < smoker_count; i++) {
+        if (sid == smokers[i].first[0]) {
+            time_to_smoke = smokers[i].first[1];
+            smoking_area_count = smokers[i].first[2];
+            smoker = &smokers[i];
+        }
+    }
+
+    for (int i = 0; i < smoking_area_count; i++) {
+        int cell_i = smoker->second[i * 3];
+        int cell_j = smoker->second[i * 3 + 1];
+        int cigbutt_count = smoker->second[i * 3 + 2];
+
+        std::pair<int, int> top_left = std::make_pair(cell_i - 1, cell_j - 1);
+        std::pair<int, int> top_right = std::make_pair(cell_i - 1, cell_j + 1);
+        std::pair<int, int> bottom_left = std::make_pair(cell_i + 1, cell_j - 1);
+        std::pair<int, int> bottom_right = std::make_pair(cell_i + 1, cell_j + 1);
+
+        // locking for same cells
+        std::cout << "smoker " << sid << " is waiting for lock" << std::endl;
+        lock_grid(top_left, bottom_left, top_right, sid, true);
+        std::cout << "lock successful for smoker: " << sid << std::endl;
+        hw2_notify(SNEAKY_SMOKER_ARRIVED, sid, cell_i, cell_j);
+        int direction = -1;
+        std::pair<int,int> coord;
+        for (int j = 0; j < cigbutt_count; j++) {
+            int retval = wait(time_to_smoke, &smoker_wait_cond, &smoker_wait_mutex);
+
+            switch (direction) {
+                case 0:
+                    coord.second++;
+                    direction++;
+                    break;
+                case 1:
+                    coord.second++;
+                    direction++;
+                    break;
+                case 2:
+                    coord.first++;
+                    direction++;
+                    break;
+                case 3:
+                    coord.first++;
+                    direction++;
+                    break;
+                case 4:
+                    coord.second--;
+                    direction++;
+                    break;
+                case 5:
+                    coord.second--;
+                    direction++;
+                    break;
+                case 6:
+                    coord.first--;
+                    direction++;
+                    break;
+                case 7:
+                    coord.first--;
+                    direction++;
+                    break;
+                default:
+                    coord = top_left;
+                    direction = 0;
+                    break;
+            }
+//            pthread_mutex_lock(&smoker_grid_mutex[cell_i][cell_j]);
+            pthread_mutex_lock(&grid_cigbutt_count_mutex);
+//            std::cout << coord.first << " " << coord.second << " " << sid << std::endl;
+//            std::cout << grid[coord.first][coord.second] << " " << cigbutt_count << std::endl;
+            grid[coord.first][coord.second]++;
+            hw2_notify(SNEAKY_SMOKER_FLICKED, sid, coord.first, coord.second);
+            pthread_mutex_unlock(&grid_cigbutt_count_mutex);
+//            pthread_mutex_unlock(&smoker_grid_mutex[cell_i][cell_j]);
+        }
+        // MAYBE USE smoker_grid_lock here?
+//        pthread_mutex_unlock(&smoker_grid_mutex[cell_i][cell_j]);
+
+        unlock_grid(top_left, bottom_left, top_right, true);
+
+//        pthread_mutex_unlock(&smoker_grid_mutex[cell_i][cell_j]);
+//        pthread_mutex_lock(&smoker_grid_lock);
+//        // TODO: DECREMENT SMOKER GRID VECTOR
+//        for (int k = top_left.first; k <= bottom_left.first; k++) {
+//            for (int l = top_left.second; l <= top_right.second; l++) {
+//                smoker_grid[k][l]--;
+//            }
+//        }
+//        pthread_mutex_unlock(&smoker_grid_lock);
+
+        hw2_notify(SNEAKY_SMOKER_LEFT, sid, 0, 0);
+
+        // TODO: NOTIFY THE OTHER SMOKERS (OR MAYBE PROPER PRIVATES?)
+        pthread_cond_broadcast(&grid_status_cond);
+
+
+    }
+
+    std::cout << "smoker " << sid << " is done smoking" << std::endl;
+    hw2_notify(SNEAKY_SMOKER_EXITED, sid, 0, 0);
     return NULL;
 }
 
 int main() {
     hw2_init_notifier();
-    int order_count; // Number of orders
+    int order_count = 0; // Number of orders
+    smoker_count = 0;
+    pp_count = 0;
     std::vector <std::pair<int, std::string> > orders; // Part 2
     std::vector < pthread_t > order_threads; // Part 2
 
@@ -422,6 +602,15 @@ int main() {
         pp_threads.push_back(std::make_pair(pps[i].first[0], thread));
     }
 
+    // Initialize smoker threads
+    for (int i = 0; i < smoker_count; i++) {
+        std::pair<int, pthread_t> smoker;
+        smoker.first = smokers[i].first[0];
+        pthread_t thread;
+        smoker.second = thread;
+        smoker_threads.push_back(smoker);
+    }
+
     // Create order threads here
     for (int i = 0; i < order_count; i++) {
         std::pair<int, std::string>* order = &orders[i];
@@ -436,6 +625,14 @@ int main() {
         hw2_notify(PROPER_PRIVATE_CREATED,*gid,0,0);
     }
 
+    // Create smoker threads here
+    for (int i = 0; i < smoker_count; i++) {
+        int* sid = new int();
+        *sid = smoker_threads[i].first;
+        pthread_create(&smoker_threads[i].second, NULL, smoker_routine, sid);
+        hw2_notify(SNEAKY_SMOKER_CREATED, *sid, 0, 0);
+    }
+
     // Join proper private threads here
     for (int i = 0; i < pp_count; i++) {
         pthread_join(pp_threads[i].second, NULL);
@@ -444,6 +641,11 @@ int main() {
     // Join order threads here
     for (int i = 0; i < order_count; i++) {
         pthread_join(order_threads[i], NULL);
+    }
+
+    // Join smoker threads here
+    for (int i = 0; i < smoker_count; i++) {
+        pthread_join(smoker_threads[i].second, NULL);
     }
 
 //    // Destroying mutex
