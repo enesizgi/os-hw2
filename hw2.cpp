@@ -385,7 +385,7 @@ int main() {
 
 
     // First parameters of pair is unique gid.
-    std::vector<std::pair<int, pthread_mutex_t> > mutex_vec;
+//    std::vector<std::pair<int, pthread_mutex_t> > mutex_vec;
     std::vector<std::pair<int, pthread_t> > pp_threads;
 
     input_part1(gi, gj, pp_count, grid, pps);
@@ -409,12 +409,12 @@ int main() {
         pp_wait_conds.push_back(std::make_pair(pps[i].first[0], cond));
     }
 
-    // Creating mutex for each proper private
-    for (int i = 0; i < pp_count ; i++) {
-        pthread_mutex_t mutex;
-        pthread_mutex_init(&mutex, NULL);
-        mutex_vec.push_back(std::make_pair(pps[i].first[0], mutex));
-    }
+//    // Creating mutex for each proper private
+//    for (int i = 0; i < pp_count ; i++) {
+//        pthread_mutex_t mutex;
+//        pthread_mutex_init(&mutex, NULL);
+//        mutex_vec.push_back(std::make_pair(pps[i].first[0], mutex));
+//    }
 
     // Initialize proper private threads here
     for (int i = 0; i < pp_count; i++) {
@@ -446,10 +446,10 @@ int main() {
         pthread_join(order_threads[i], NULL);
     }
 
-    // Destroying mutex
-    for (int i = 0; i < pp_count; i++) {
-        pthread_mutex_destroy(&mutex_vec[i].second);
-    }
+//    // Destroying mutex
+//    for (int i = 0; i < pp_count; i++) {
+//        pthread_mutex_destroy(&mutex_vec[i].second);
+//    }
 
     return 0;
 }
