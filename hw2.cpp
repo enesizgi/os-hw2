@@ -9,13 +9,9 @@ int pp_count; // Number of proper privates
 std::vector <std::vector<int> > grid;
 pthread_mutex_t grid_cigbutt_count_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// 1 is locked.
-// 0 is unlocked.
-//std::vector <std::vector<int> > grid_mutex_status; // NOT USED RIGHT NOW
 std::vector <std::vector<pthread_mutex_t> > grid_mutex;
 pthread_mutex_t grid_status_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t grid_status_cond = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t grid_status_exit_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // First integer is unique gid.
 // Second integer is coord_i.
@@ -397,7 +393,7 @@ int main() {
 
     input_part1(gi, gj, pp_count, grid, pps);
     input_part2(order_count, orders);
-//    input_part3(smoker_count, smokers);
+    input_part3(smoker_count, smokers);
 
     // Initialize order threads
     for (int i = 0; i < order_count; i++) {
@@ -423,7 +419,7 @@ int main() {
         mutex_vec.push_back(std::make_pair(pps[i].first[0], mutex));
     }
 
-    // Initialize threads here
+    // Initialize proper private threads here
     for (int i = 0; i < pp_count; i++) {
         pthread_t thread;
         pp_threads.push_back(std::make_pair(pps[i].first[0], thread));
@@ -435,7 +431,7 @@ int main() {
         pthread_create(&order_threads[i], NULL, order_routine, order);
     }
 
-    // Create threads here
+    // Create proper private threads here
     for (int i = 0; i < pp_count;i++) {
         int* gid = new int();
         *gid = pp_threads[i].first;
@@ -443,11 +439,12 @@ int main() {
         hw2_notify(PROPER_PRIVATE_CREATED,*gid,0,0);
     }
 
-    // Join threads here
+    // Join proper private threads here
     for (int i = 0; i < pp_count; i++) {
         pthread_join(pp_threads[i].second, NULL);
     }
 
+    // Join order threads here
     for (int i = 0; i < order_count; i++) {
         pthread_join(order_threads[i], NULL);
     }
