@@ -6,6 +6,7 @@
 
 int gi, gj; // grid size
 int pp_count; // Number of proper privates
+int smoker_count; // Number of smokers
 std::vector <std::vector<int> > grid;
 pthread_mutex_t grid_cigbutt_count_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -23,6 +24,11 @@ pthread_mutex_t pps_current_area_mutex = PTHREAD_MUTEX_INITIALIZER;
 //First parameter is unique gid.
 //Second parameter is a vector of pair of top-left coordinates.
 std::vector<std::pair<std::vector<int>, std::vector<std::pair<int, int> > > > pps;
+
+// Smokers vector consists of pairs.
+// First pair parameter is a pair of 3: id, time_to_smoke, cell_count.
+// Second pair parameter is also a pair of 3: coord_i, coord_j, cigbutt_count.
+std::vector< std::pair < std::vector <int>, std::vector<int> > >  smokers;
 
 pthread_mutex_t pp_wait_mutexes_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t pp_wait_conds_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -179,22 +185,15 @@ int try_locking_grid(std::pair<int,int>& top_left, std::pair<int,int>& bottom_le
     for (int i = top_left.first; i <= bottom_left.first; i++) {
         for (int j = top_left.second; j <= top_right.second; j++) {
             if (pthread_mutex_trylock(&grid_mutex[i][j]) != 0) {
-//                std::cout << "failure " << i << " " << j << std::endl;
                 int locations_size = locations.size();
                 for (int k = 0; k < locations_size; k++) {
                     int x = locations[k].first;
                     int y = locations[k].second;
-//                    pthread_mutex_lock(&print_mutex);
-//                    std::cout << "locations: " << x << " " << y << std::endl;
-//                    pthread_mutex_unlock(&print_mutex);
                     pthread_mutex_unlock(&grid_mutex[x][y]);
                 }
                 return 1; // failed to lock
             }
             else {
-//                pthread_mutex_lock(&print_mutex);
-//                std::cout << "success: " << i << " " << j << std::endl;
-//                pthread_mutex_unlock(&print_mutex);
                 locations.push_back(std::make_pair(i, j));
             }
         }
@@ -374,18 +373,16 @@ void* routine (void* arg) {
     return NULL;
 }
 
+void* smoker_routine (void* arg) {
+    return NULL;
+}
+
 int main() {
     hw2_init_notifier();
     int order_count; // Number of orders
-    int smoker_count; // Number of smokers
     std::vector <std::pair<int, std::string> > orders; // Part 2
     std::vector < pthread_t > order_threads; // Part 2
 
-
-    // Smokers vector consists of pairs.
-    // First pair parameter is a pair of 3: id, time_to_smoke, cell_count.
-    // Second pair parameter is also a pair of 3: coord_i, coord_j, cigbutt_count.
-    std::vector< std::pair < std::vector <int>, std::vector<int> > >  smokers;
 
     // First parameters of pair is unique gid.
     std::vector<std::pair<int, pthread_mutex_t> > mutex_vec;
