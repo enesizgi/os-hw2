@@ -281,6 +281,7 @@ void* routine (void* arg) {
         std::pair<int,int> bottom_left = std::make_pair(cell_i + si - 1, cell_j);
 
         // Part 3 complex case'de burasi muhtemelen patlar. (case 1)
+        // Update: complex case artik calisiyor.
 //        pthread_mutex_lock(&grid_status_mutex); // MAYBE SHOULD BE REMOVED?
         lock_grid(top_left, bottom_left, top_right);
 //        std::cout << "thread grid status mutex locked: " << gid << std::endl;
