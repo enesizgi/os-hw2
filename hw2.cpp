@@ -310,6 +310,11 @@ void gather_cigbutt (int gid, std::pair<int,int>& top_left, std::pair<int,int>& 
 
     for (int i = top_left.first; i <= bottom_left.first; i++) {
         for (int j = top_left.second; j <= top_right.second; j++) {
+            pthread_mutex_lock(&grid_cigbutt_count_mutex);
+            if (grid[i][j] == 0) {
+                pthread_mutex_unlock(&grid_cigbutt_count_mutex);
+                break;
+            }
             while (true) {
                 pthread_cond_broadcast(&grid_status_cond);
                 int waitRetVal = wait(wait_time, pp_wait_cond, pp_wait_mutex);
