@@ -404,6 +404,13 @@ void* routine (void* arg) {
                 hw2_notify(PROPER_PRIVATE_TOOK_BREAK, gid, 0, 0);
                 pthread_cond_broadcast(&grid_status_cond);
                 pthread_cond_wait(&order_type_cond, &order_type_mutex);
+                if (order_type == 3) {
+                    pthread_mutex_unlock(&order_type_mutex);
+                    pthread_mutex_unlock(&pp_last_obeyed_order_mutex);
+                    pthread_cond_broadcast(&grid_status_cond);
+                    hw2_notify(PROPER_PRIVATE_STOPPED, gid, 0, 0);
+                    return NULL;
+                }
                 hw2_notify(PROPER_PRIVATE_CONTINUED, gid, 0, 0);
                 pthread_mutex_lock(&pp_last_obeyed_order_mutex);
                 for (int k = 0; k < pp_count; k++) {
