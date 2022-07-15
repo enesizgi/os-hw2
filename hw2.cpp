@@ -546,7 +546,7 @@ void* smoker_routine (void* arg) {
                     break;
                 case 7:
                     coord.first--;
-                    direction++;
+                    direction = 0;
                     break;
                 default:
                     coord = top_left;
