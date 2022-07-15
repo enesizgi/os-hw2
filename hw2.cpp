@@ -334,6 +334,7 @@ void gather_cigbutt (int gid, std::pair<int,int>& top_left, std::pair<int,int>& 
 
 void* routine (void* arg) {
     int gid = *(int*)arg;
+    hw2_notify(PROPER_PRIVATE_CREATED,gid,0,0);
     pthread_mutex_t* pp_wait_mutex;
     pthread_cond_t* pp_wait_cond;
     std::pair<std::vector<int>, std::vector<std::pair<int, int> > >* pp;
@@ -435,6 +436,7 @@ void* routine (void* arg) {
 
 void* smoker_routine (void* arg) {
     int sid = *(int*)arg;
+    hw2_notify(SNEAKY_SMOKER_CREATED, sid, 0, 0);
     int time_to_smoke, smoking_area_count;
     std::pair < std::vector <int>, std::vector<int> >* smoker;
     pthread_mutex_t* smoker_wait_mutex;
@@ -637,7 +639,7 @@ int main() {
         int* gid = new int();
         *gid = pp_threads[i].first;
         pthread_create(&pp_threads[i].second, NULL, routine, gid);
-        hw2_notify(PROPER_PRIVATE_CREATED,*gid,0,0);
+//        hw2_notify(PROPER_PRIVATE_CREATED,*gid,0,0);
     }
 
     // Create smoker threads here
@@ -645,7 +647,7 @@ int main() {
         int* sid = new int();
         *sid = smoker_threads[i].first;
         pthread_create(&smoker_threads[i].second, NULL, smoker_routine, sid);
-        hw2_notify(SNEAKY_SMOKER_CREATED, *sid, 0, 0);
+//        hw2_notify(SNEAKY_SMOKER_CREATED, *sid, 0, 0);
     }
 
     // Join proper private threads here
