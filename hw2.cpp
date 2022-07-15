@@ -239,7 +239,6 @@ int try_locking_grid(std::pair<int,int>& top_left, std::pair<int,int>& bottom_le
                 return 1; // failed to lock
             }
             else {
-                std::cout << 'else ' << i << ' ' << j << std::endl;
                 if (isSmoker) {
                     pthread_mutex_lock(&smoker_grid_lock);
                     smoker_grid[i][j]++;
