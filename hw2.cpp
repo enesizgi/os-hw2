@@ -313,7 +313,7 @@ void gather_cigbutt (int gid, std::pair<int,int>& top_left, std::pair<int,int>& 
             pthread_mutex_lock(&grid_cigbutt_count_mutex);
             if (grid[i][j] == 0) {
                 pthread_mutex_unlock(&grid_cigbutt_count_mutex);
-                break;
+                continue;
             }
             pthread_mutex_unlock(&grid_cigbutt_count_mutex);
             while (true) {
@@ -325,7 +325,7 @@ void gather_cigbutt (int gid, std::pair<int,int>& top_left, std::pair<int,int>& 
                 pthread_mutex_lock(&grid_cigbutt_count_mutex);
                 if (grid[i][j] == 0) {
                     pthread_mutex_unlock(&grid_cigbutt_count_mutex);
-                    break;
+                    continue;
                 }
                     grid[i][j]--;
                     hw2_notify(PROPER_PRIVATE_GATHERED, gid, i, j);
