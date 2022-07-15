@@ -221,9 +221,10 @@ int try_locking_grid(std::pair<int,int>& top_left, std::pair<int,int>& bottom_le
                     pthread_mutex_lock(&smoker_grid_lock);
                     if (smoker_grid[i][j] > 0) {
                         smoker_grid[i][j]++;
+                        pthread_mutex_unlock(&smoker_grid_lock);
+                        continue;
                     }
                     pthread_mutex_unlock(&smoker_grid_lock);
-                    continue;
                 }
                 int locations_size = locations.size();
                 for (int k = 0; k < locations_size; k++) {
